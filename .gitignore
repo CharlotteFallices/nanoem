@@ -1,4 +1,5 @@
 # build artifact
+/compile_commands.json
 /**/out
 
 # document
@@ -17,6 +18,7 @@
 /emapp/plugins/PEPlugin/obj
 /emapp/resources/translations/*/all.txt
 /emapp/resources/translations/*/merge.pl
+/emapp/test/directxtexmedia
 
 # manual checkout
 /dependencies/ffmpeg

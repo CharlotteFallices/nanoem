@@ -8,13 +8,13 @@
 macOS 版
 -------------------------------------------------------
 
-.. caution::
-  - CPU を最大限に使う（悪く言えば酷使する）特性のため MacBook 系列上で使うとバッテリー駆動の場合はバッテリーが急激に減り、かつファンがうるさく鳴ります
-  - `macOS 10.13.4 から外付け GPU に対応 <https://support.apple.com/ja-jp/HT208544>`_ していますが nanoem では動作未確認です
+.. important::
+   35.0 以降から Apple Silicon 版のみとし Intel Mac 版は廃止予定です
 
 - macOS 10.13 以上かつ 64bit 環境 (31.0 から Apple Silicon 対応) [#f1]_
 
   - `Metal が動作する環境 <https://support.apple.com/ja-jp/HT205073>`_ を確認してください
+  - `macOS 10.13.4 から外付け GPU に対応 <https://support.apple.com/ja-jp/HT208544>`_ していますが nanoem では動作未確認です
   - 10.12 以下であっても 10.9 以上であれば動かせますが主にハードウェア的な問題で満足に動かせない可能性が高いためサポート対象外とさせていただきます
 
 - 1280x800 以上の画面
@@ -34,8 +34,8 @@ Windows 版
 Linux 版
 -------------------------------------------------------
 
-.. note::
-   現状は `ソースからビルド <https://github.com/hkrn/nanoem/>`_ のみに限られます
+.. caution::
+   リリースの配布物に含まれません。そのため `ソースコードからのビルド <https://github.com/hkrn/nanoem/>`_ のみに限られます
 
 - 64bit 環境
 - OpenGL 3.3 以上または OpenGL ES 3.0 以上
@@ -113,12 +113,22 @@ Facebook とか LINE とかの場合は知ってそうな友達に聞くしか�
 不具合報告の方法
 -------------------------------------------------------
 
-まずは「:doc:`faq`」または「:doc:`trouble_shooting`」を確認してから「`マシュマロ <https://marshmallow-qa.com/shimacpyon>`_」に送ってください。送る時間帯は気にせずいつでも送ってよいです。
-内容次第では「`nanoem 不具合問い合わせ <https://docs.google.com/forms/d/e/1FAIpQLSevO1nReFpARl9JH0ouQme7xzijm1XVfwiJuEg-PGZrmMSoYg/viewform>`_」にお願いすることがあります。
+まずは「:doc:`faq`」または「:doc:`trouble_shooting`」を確認してから以下のいずれかの方法で質問してください。
 
-.. note::
-  - マシュマロはサービスの性質上書き方が悪いと本人のもとに届かないことがあります。また、届いたかどうかについての回答はしません
-  - 有料のチョコマシュマロは対応していません
+* 「`GitHub の Discussions の Q/A ボード <https://github.com/hkrn/nanoem/discussions/categories/q-a>`_」
+
+  * 要 GitHub アカウント
+  * サービスの性質上英語表記ですが ``Discussions`` タブの方は日本語で質問投げても問題ありません
+  * ``Issues`` タブの方は原則英語で回答対応のためもし投げる場合は英語でお願いします
+
+* 「`マシュマロ <https://marshmallow-qa.com/shimacpyon>`_」
+
+  * ログイン不要
+  * サービスの性質上書き方が悪いと本人のもとに届かないことがあります
+
+    * また、届いたかどうかについての回答はしません
+
+  * 有料のチョコマシュマロは対応していません
 
 不具合報告時の注意
 -------------------------------------------------------

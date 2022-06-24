@@ -485,6 +485,7 @@ Project::DrawQueue::drawPass(const DrawQueue::PassCommandBuffer *pass, Project *
         EnumStringifyUtils::toString(pa.colors[0].action), EnumStringifyUtils::toString(pa.depth.action),
         EnumStringifyUtils::toString(pa.stencil.action), pass->m_batch ? "true" : "false");
     nanoem_u32_t lastDrawPassHash = 0;
+    bool pipelineApplied = false;
     hasher.begin();
     for (CommandBuffer::const_iterator it2 = pass->m_items->begin() + 1, end2 = pass->m_items->end(); it2 != end2;
          ++it2) {
@@ -502,9 +503,13 @@ Project::DrawQueue::drawPass(const DrawQueue::PassCommandBuffer *pass, Project *
                 project->findRenderPassName(pass->m_handle), it2 - pass->m_items->begin(),
                 project->findRenderPipelineName(item.u.m_pb.m_pipeline));
 #endif /* NANOEM_ENABLE_DEBUG_LABEL */
-            sg::apply_pipeline(item.u.m_pb.m_pipeline);
-            sg::apply_bindings(&item.u.m_pb.m_bindings);
-            hasher.add(item.u.m_pb);
+            const sg_pipeline pipeline = item.u.m_pb.m_pipeline;
+            if (sg::query_pipeline_state(pipeline) == SG_RESOURCESTATE_VALID) {
+                sg::apply_pipeline(pipeline);
+                sg::apply_bindings(&item.u.m_pb.m_bindings);
+                hasher.add(item.u.m_pb);
+                pipelineApplied = true;
+            }
             break;
         }
         case kCommandTypeApplyViewport: {
@@ -555,9 +560,10 @@ Project::DrawQueue::drawPass(const DrawQueue::PassCommandBuffer *pass, Project *
             hasher.add(item.u.m_draw);
             nanoem_u32_t drawPassHash = hasher.end();
             hasher.begin();
-            if (lastDrawPassHash != drawPassHash) {
+            if (pipelineApplied && lastDrawPassHash != drawPassHash) {
                 sg::draw(item.u.m_draw.m_offset, item.u.m_draw.m_count, 1);
                 lastDrawPassHash = drawPassHash;
+                pipelineApplied = false;
             }
             break;
         }
@@ -602,7 +608,13 @@ Project::DrawQueue::flush(Project *project)
     bx::HashMurmur2A hasher;
     for (PassCommandBufferList::const_iterator it = m_commandBuffers.begin(), end = m_commandBuffers.end(); it != end;
          ++it) {
-        drawPass(it, project, hasher);
+        const sg_pass pass = it->m_handle;
+        if (sg::query_pass_state(pass) == SG_RESOURCESTATE_VALID) {
+            drawPass(it, project, hasher);
+        }
+        else {
+            SG_INSERT_MARKERF("[WARN] The pass \"%s\" (%d) was skipped", project->findRenderPassName(pass), pass.id);
+        }
         nanoem_delete(it->m_items);
     }
     m_commandBuffers.clear();
@@ -6419,6 +6431,7 @@ Project::loadOffscreenRenderTargetEffect(Effect *ownerEffect, const IncludeEffec
                     cond.m_hidden = cond.m_none = false;
                     newConditions.push_back(cond);
                     m_allOffscreenRenderTargetEffectSets[ownerEffect].insert(targetEffect);
+                    m_loadedEffectSet.insert(targetEffect);
                 }
                 else {
                     bool hitCache = enableSourceCache && findSourceEffectCache(resolvedURI, output, error);
@@ -6435,6 +6448,7 @@ Project::loadOffscreenRenderTargetEffect(Effect *ownerEffect, const IncludeEffec
                                           URI::lastPathComponent(filename))
                                     : filename);
                             m_allOffscreenRenderTargetEffectSets[ownerEffect].insert(targetEffect);
+                            m_loadedEffectSet.insert(targetEffect);
                             if (enableSourceCache && !hitCache) {
                                 setSourceEffectCache(resolvedURI, output, error);
                             }
@@ -6460,6 +6474,7 @@ Project::loadOffscreenRenderTargetEffect(Effect *ownerEffect, const IncludeEffec
                     if (loadOffscreenRenderTargetEffectFromByteArray(
                             targetEffect, fileURI, condition, bytes, newConditions, progress, error)) {
                         m_allOffscreenRenderTargetEffectSets[ownerEffect].insert(targetEffect);
+                        m_loadedEffectSet.insert(targetEffect);
                     }
                     else {
                         destroyDetachedEffect(targetEffect);
@@ -6517,6 +6532,7 @@ Project::loadOffscreenRenderTargetEffectFromEffectSourceMap(const Effect *ownerE
     }
     if (loaded) {
         m_allOffscreenRenderTargetEffectSets[ownerEffect].insert(targetEffect);
+        m_loadedEffectSet.insert(targetEffect);
     }
     else {
         destroyDetachedEffect(targetEffect);
@@ -6562,7 +6578,9 @@ Project::cancelRenderOffscreenRenderTarget(Effect *ownerEffect)
             for (DrawQueue::PassCommandBufferList::iterator it3 = buffers.begin(), end3 = buffers.end(); it3 != end3;
                  ++it3) {
                 if (it3->m_handle.id == pass.id) {
+                    DrawQueue::CommandBuffer *items = it3->m_items;
                     it3 = buffers.erase(it3);
+                    nanoem_delete(items);
                     EnumUtils::setEnabled(kResetAllPasses, m_stateFlags, true);
                 }
             }

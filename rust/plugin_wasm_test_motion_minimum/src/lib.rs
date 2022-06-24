@@ -7,7 +7,7 @@
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::os::raw::c_void;
-use std::{collections::HashMap, ffi::CStr, ptr::null_mut};
+use std::{collections::HashMap, ptr::null_mut};
 
 #[allow(non_camel_case_types)]
 pub type nanoem_application_plugin_status_t = i32;
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn nanoemApplicationPluginMotionIOGetName(
         })
         .unwrap()
     );
-    b"plugin_wasm_test_motion_full\0" as *const u8 as *const i8
+    b"plugin_wasm_test_motion_minimum\0" as *const u8 as *const i8
 }
 
 /// # Safety
@@ -108,7 +108,7 @@ pub unsafe extern "C" fn nanoemApplicationPluginMotionIOGetDescription(
         })
         .unwrap()
     );
-    b"This is plugin_wasm_test_motion_full\0" as *const u8 as *const i8
+    b"This is plugin_wasm_test_motion_minimum\0" as *const u8 as *const i8
 }
 
 /// # Safety

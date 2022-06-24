@@ -6,6 +6,10 @@
 
 #include "Win32ThreadedApplicationService.h"
 
+#include <ShlObj.h>
+#include <d3d11.h>
+#include <dxgi.h>
+
 #include "COMInline.h"
 #include "D3D11BackgroundDrawer.h"
 #include "D3D11SkinDeformerFactory.h"
@@ -31,10 +35,6 @@
 #if defined(NANOEM_ENABLE_RENDERDOC)
 #include "renderdoc_app.h"
 #endif /* NANOEM_ENABLE_RENDERDOC */
-
-#include <ShlObj.h>
-#include <d3d11.h>
-#include <dxgi.h>
 
 namespace nanoem {
 namespace win32 {
@@ -491,6 +491,9 @@ Win32ThreadedApplicationService::loadJSONConfig(const wchar_t *executablePath)
 
 Win32ThreadedApplicationService::Win32ThreadedApplicationService(const JSON_Value *config)
     : ThreadedApplicationService(config)
+    , m_requestWindowClose(nullptr)
+    , m_requestWindowMove(nullptr)
+    , m_requestWindowResize(nullptr)
     , m_displaySyncInterval(1)
 {
     const char *storagePath = json_object_dotget_string(json_object(applicationConfiguration()), "win32.redo.path");
@@ -687,8 +690,8 @@ Win32ThreadedApplicationService::handleInitializeApplication()
     ThreadedApplicationService::handleInitializeApplication();
     setupNewProject();
     HWND window = (HWND) m_nativeView;
-    ImGuiIO &io = ImGui::GetIO();
 #if defined(IMGUI_HAS_VIEWPORT)
+    ImGuiIO &io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
     ImGuiPlatformIO &platformIO = ImGui::GetPlatformIO();
     platformIO.Platform_CreateWindow = [](ImGuiViewport *viewport) {
@@ -947,7 +950,7 @@ Win32ThreadedApplicationService::handleInitializeApplication()
     }
     updateAllMonitors();
 #else
-    io.ImeWindowHandle = window;
+    ImGui::GetMainViewport()->PlatformHandleRaw = window;
 #endif /* IMGUI_HAS_VIEWPORT */
 }
 

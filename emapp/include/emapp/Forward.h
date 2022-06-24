@@ -53,8 +53,7 @@ protected:
 
 class TinySTLAllocator : private NonCopyable {
 public:
-    struct DoNothing : private NonCopyable {
-    };
+    struct DoNothing : private NonCopyable { };
     static void *static_allocate(size_t bytes);
     static void static_deallocate(void *ptr, size_t bytes) NANOEM_DECL_NOEXCEPT;
 };
@@ -446,10 +445,22 @@ typedef enum sg_uniform_type {
     SG_UNIFORMTYPE_FLOAT2,
     SG_UNIFORMTYPE_FLOAT3,
     SG_UNIFORMTYPE_FLOAT4,
+    SG_UNIFORMTYPE_INT,
+    SG_UNIFORMTYPE_INT2,
+    SG_UNIFORMTYPE_INT3,
+    SG_UNIFORMTYPE_INT4,
     SG_UNIFORMTYPE_MAT4,
     _SG_UNIFORMTYPE_NUM,
     _SG_UNIFORMTYPE_FORCE_U32 = 0x7FFFFFFF
 } sg_uniform_type;
+
+typedef enum sg_uniform_layout {
+    _SG_UNIFORMLAYOUT_DEFAULT,
+    SG_UNIFORMLAYOUT_NATIVE,
+    SG_UNIFORMLAYOUT_STD140,
+    _SG_UNIFORMLAYOUT_NUM,
+    _SG_UNIFORMLAYOUT_FORCE_U32 = 0x7FFFFFFF
+} sg_uniform_layout;
 
 typedef enum sg_cull_mode {
     _SG_CULLMODE_DEFAULT, /* value 0 reserved for default-init */
@@ -663,6 +674,7 @@ typedef struct sg_shader_uniform_desc {
 
 typedef struct sg_shader_uniform_block_desc {
     size_t size;
+    sg_uniform_layout layout;
     sg_shader_uniform_desc uniforms[SG_MAX_UB_MEMBERS];
 } sg_shader_uniform_block_desc;
 

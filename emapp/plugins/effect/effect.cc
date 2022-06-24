@@ -4,6 +4,7 @@
    This file is part of emapp component and it's licensed under Mozilla Public License. see LICENSE.md for more details.
  */
 
+#define NOMINMAX
 #include "emapp/sdk/Effect.h"
 #include "fx9/Compiler.h"
 
@@ -243,8 +244,7 @@ struct EffectCompiler {
 
 } /* namespace anonymous */
 
-struct nanoem_application_plugin_effect_compiler_t : EffectCompiler {
-};
+struct nanoem_application_plugin_effect_compiler_t : EffectCompiler { };
 
 nanoem_u32_t APIENTRY
 nanoemApplicationPluginEffectCompilerGetABIVersion()

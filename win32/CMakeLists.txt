@@ -1,6 +1,9 @@
 option(NANOEM_ENABLE_UPLOAD_PDB "Enable uploading debug symbols to sentry.io" OFF)
 option(NANOEM_ENABLE_RENDERDOC_WIN32 "Enable renderdoc integration" OFF)
-set(CMAKE_EXE_LINKER_FLAGS "/LARGEADDRESSAWARE")
+option(NANOEM_ENABLE_D3D11ON12 "Enable D3D11On12 layer" OFF)
+if(MSVC)
+  set(CMAKE_EXE_LINKER_FLAGS "/LARGEADDRESSAWARE")
+endif()
 
 # version
 include(${PROJECT_SOURCE_DIR}/cmake/GetGitRevisionDescription.cmake)
@@ -16,6 +19,7 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src WIN32_SOURCES)
 add_executable(${NANOEM_EXECUTABLE_NAME} WIN32 ${CMAKE_CURRENT_SOURCE_DIR}/main.cc ${WIN32_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 set_target_properties(${NANOEM_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${NANOEM_EXECUTABLE_NAME})
+target_compile_definitions(${NANOEM_EXECUTABLE_NAME} PRIVATE _UNICODE)
 if(TARGET sokol_glcore33)
   target_compile_definitions(${NANOEM_EXECUTABLE_NAME} PRIVATE NANOEM_WIN32_HAS_OPENGL)
 endif()
@@ -36,6 +40,10 @@ if(NANOEM_ENABLE_RENDERDOC_WIN32)
   target_include_directories(${NANOEM_EXECUTABLE_NAME} PRIVATE ${RENDERDOC_INCLUDE_DIR})
   add_custom_command(TARGET ${NANOEM_EXECUTABLE_NAME} POST_BUILD
                      COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different "${RENDERDOC_LIBRARY_DIR}/renderdoc.dll" "$<TARGET_FILE_DIR:${NANOEM_EXECUTABLE_NAME}>")
+endif()
+if(NANOEM_ENABLE_D3D11ON12)
+  target_compile_definitions(${NANOEM_EXECUTABLE_NAME} PRIVATE NANOEM_ENABLE_D3D11ON12)
+  target_link_libraries(${NANOEM_EXECUTABLE_NAME} d3d12)
 endif()
 
 # integration

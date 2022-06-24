@@ -7,7 +7,7 @@
 use std::{ffi::CString, path::Path};
 
 use anyhow::Result;
-use log::warn;
+use tracing::warn;
 use walkdir::WalkDir;
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::WasiEnv;
@@ -309,7 +309,15 @@ pub struct ModelIOPluginController {
 }
 
 impl ModelIOPluginController {
-    pub fn new(path: &Path, store: &Store, env: &mut WasiEnv) -> Result<Self> {
+    pub fn new(plugins: Vec<ModelIOPlugin>) -> Self {
+        let function_indices = vec![];
+        Self {
+            plugins,
+            function_indices,
+            plugin_index: None,
+        }
+    }
+    pub fn from_path(path: &Path, store: &Store, env: &mut WasiEnv) -> Result<Self> {
         let mut plugins = vec![];
         for entry in WalkDir::new(path.parent().unwrap()) {
             let entry = entry?;
@@ -328,12 +336,7 @@ impl ModelIOPluginController {
                 }
             }
         }
-        let function_indices = vec![];
-        Ok(Self {
-            plugins,
-            function_indices,
-            plugin_index: None,
-        })
+        Ok(Self::new(plugins))
     }
     pub fn initialize(&self) -> Result<()> {
         self.plugins
@@ -452,6 +455,10 @@ impl ModelIOPluginController {
     }
     pub fn terminate(&self) {
         self.plugins.iter().for_each(|plugin| plugin.terminate())
+    }
+    #[allow(unused)]
+    pub(super) fn all_plugins_mut(&mut self) -> &mut [ModelIOPlugin] {
+        &mut self.plugins
     }
     fn current_plugin(&self) -> Result<&ModelIOPlugin> {
         if let Some(plugin_index) = self.plugin_index {

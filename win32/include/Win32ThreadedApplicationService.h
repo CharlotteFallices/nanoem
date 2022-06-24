@@ -10,11 +10,13 @@
 
 #include "emapp/ThreadedApplicationService.h"
 
-#include <d3d11.h>
-
 #include <atomic>
 
 #include "imgui/imgui.h"
+
+struct ID3D11DepthStencilView;
+struct ID3D11RenderTargetView;
+struct ID3D11Texture2D;
 
 namespace nanoem {
 
@@ -116,9 +118,9 @@ private:
     ID3D11RenderTargetView *m_d3d11RenderTargetView = nullptr;
     ID3D11Texture2D *m_d3d11DepthStencilTexture = nullptr;
     ID3D11DepthStencilView *m_d3d11DepthStencilView = nullptr;
-    std::atomic<HWND> m_requestWindowClose = nullptr;
-    std::atomic<HWND> m_requestWindowMove = nullptr;
-    std::atomic<HWND> m_requestWindowResize = nullptr;
+    std::atomic<HWND> m_requestWindowClose;
+    std::atomic<HWND> m_requestWindowMove;
+    std::atomic<HWND> m_requestWindowResize;
     std::atomic<UINT> m_displaySyncInterval;
     bool m_requestUpdatingAllMonitors = false;
 };

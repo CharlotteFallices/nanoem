@@ -6,16 +6,16 @@
 
 #include "WASAPIAudioPlayer.h"
 
+#include <Mferror.h>
+#include <mfapi.h>
+#include <mftransform.h>
+#include <wmcodecdsp.h>
+
 #include "COMInline.h"
 #include "emapp/Constants.h"
 #include "emapp/Error.h"
 #include "emapp/IEventPublisher.h"
 #include "emapp/private/CommonInclude.h"
-
-#include <Mferror.h>
-#include <mfapi.h>
-#include <mftransform.h>
-#include <wmcodecdsp.h>
 
 namespace nanoem {
 namespace win32 {
@@ -30,6 +30,9 @@ WASAPIAudioPlayer::WASAPIAudioPlayer(IEventPublisher *eventPublisher)
     : m_eventPublisher(eventPublisher)
     , m_audioSessionEventsHandler(this)
     , m_notificationClient(this)
+    , m_offset(0)
+    , m_numProceededPackets(0)
+    , m_requestState(kRequestStateNone)
 {
     Error error;
     m_eventHandle = CreateEventW(nullptr, false, false, L"WASAPIAudioPlayer::m_eventHandle");
@@ -134,11 +137,11 @@ WASAPIAudioPlayer::playPart(double, double)
 void
 WASAPIAudioPlayer::update()
 {
-    const nanoem_u64_t audioSampleOffset =
-                           static_cast<nanoem_u64_t>(m_offset / m_nativeOutputDescription.nBlockAlign),
+    const nanoem_u64_t audioSampleOffset = static_cast<nanoem_u64_t>(m_offset / m_nativeOutputDescription.nBlockAlign),
                        clockSampleOffset =
                            static_cast<nanoem_u64_t>(m_clock.seconds() * m_nativeOutputDescription.nSamplesPerSec),
-                       clockSampleLatencyThreshold = (m_nativeOutputDescription.nSamplesPerSec / 60) * kClockLatencyThresholdFPSCount,
+                       clockSampleLatencyThreshold =
+                           (m_nativeOutputDescription.nSamplesPerSec / 60) * kClockLatencyThresholdFPSCount,
                        clockSampleLatency =
                            (clockSampleOffset > audioSampleOffset ? clockSampleOffset - audioSampleOffset
                                                                   : audioSampleOffset - clockSampleOffset) *
@@ -372,8 +375,7 @@ WASAPIAudioPlayer::createNullRenderThread()
 }
 
 void
-WASAPIAudioPlayer::renderAudioBuffer(
-    nanoem_rsize_t bytesPerPacket, uint32_t numAvailablePackets, bool enableOffset)
+WASAPIAudioPlayer::renderAudioBuffer(nanoem_rsize_t bytesPerPacket, uint32_t numAvailablePackets, bool enableOffset)
 {
     const nanoem_rsize_t size =
         glm::min(numAvailablePackets * bytesPerPacket, nanoem_rsize_t(m_resampledAudioSamples.size() - m_offset));

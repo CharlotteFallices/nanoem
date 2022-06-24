@@ -206,8 +206,8 @@ struct AVFoundationEncoder {
                         [writer addInput:audioInput];
                     }
                 } @catch (NSException *exception) {
-                    NSDictionary *userInfo =
-                        [[NSDictionary alloc] initWithObjectsAndKeys:exception.reason, NSLocalizedFailureReasonErrorKey, nil];
+                    NSDictionary *userInfo = [[NSDictionary alloc]
+                        initWithObjectsAndKeys:exception.reason, NSLocalizedFailureReasonErrorKey, nil];
                     error = [[NSError alloc] initWithDomain:NSCocoaErrorDomain code:0 userInfo:userInfo];
                 }
             }
@@ -830,11 +830,9 @@ struct AVFoundationDecoder {
 
 } /* namespace anonymous */
 
-struct nanoem_application_plugin_decoder_t : AVFoundationDecoder {
-};
+struct nanoem_application_plugin_decoder_t : AVFoundationDecoder { };
 
-struct nanoem_application_plugin_encoder_t : AVFoundationEncoder {
-};
+struct nanoem_application_plugin_encoder_t : AVFoundationEncoder { };
 
 nanoem_u32_t
 nanoemApplicationPluginEncoderGetABIVersion()

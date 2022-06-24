@@ -10,10 +10,18 @@
 #include <Psapi.h>
 #include <ShlObj.h>
 #include <VersionHelpers.h>
-#include <shellapi.h>
-#ifdef NANOEM_GA_TRACKING_ID
-#include <winhttp.h>
-#endif /* NANOEM_GA_TRACKING_ID */
+#include <windowsx.h>
+
+/* IDXGIFactory6 */
+#include <dxgi1_6.h>
+#if defined(SOKOL_DEBUG) && SOKOL_DEBUG
+#include <dxgidebug.h>
+#endif /* SOKOL_DEBUG */
+
+#include <d3d11.h>
+#if defined(NANOEM_ENABLE_D3D11ON12)
+#include <d3d11on12.h>
+#endif /* NANOEM_ENABLE_D3D11ON12 */
 
 #include "COMInline.h"
 #include "Dialog.h"
@@ -27,13 +35,6 @@
 
 #include "imgui/imgui.h"
 #include "sokol/sokol_time.h"
-
-/* IDXGIFactory6 */
-#include <dxgi1_6.h>
-
-#if defined(SOKOL_DEBUG) && SOKOL_DEBUG
-#include <dxgidebug.h>
-#endif
 
 namespace nanoem {
 namespace win32 {
@@ -85,10 +86,10 @@ MainWindow::MainWindow(const bx::CommandLine *cmd, const Preference *preference,
     windowClass.style = CS_HREDRAW | CS_VREDRAW;
     windowClass.lpfnWndProc = &handleWindowProc;
     windowClass.hInstance = hInstance;
-    windowClass.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-    windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    windowClass.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     windowClass.lpszClassName = Win32ThreadedApplicationService::kRegisterClassName;
-    windowClass.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
+    windowClass.hIconSm = LoadIconW(nullptr, IDI_APPLICATION);
     if (RegisterClassExW(&windowClass) != 0) {
         static ACCEL accelerators[] = { { FVIRTKEY | FCONTROL, 'N',
                                             ApplicationMenuBuilder::kMenuItemTypeFileNewProject },
@@ -415,7 +416,7 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     LRESULT result = S_OK;
     switch (msg) {
     case WM_CREATE: {
-        LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lparam);
+        LPCREATESTRUCTW lpcs = reinterpret_cast<LPCREATESTRUCTW>(lparam);
         if (auto self = static_cast<MainWindow *>(lpcs->lpCreateParams)) {
             Error error;
             if (!self->handleWindowCreate(hwnd, error)) {
@@ -437,7 +438,7 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_MBUTTONDOWN:
     case WM_RBUTTONDOWN:
     case WM_XBUTTONDOWN: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             const Vector2 coord(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
             self->handleMouseDown(hwnd, coord, convertCursorType(msg, wparam));
         }
@@ -447,93 +448,93 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     case WM_MBUTTONUP:
     case WM_RBUTTONUP:
     case WM_XBUTTONUP: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             const Vector2 coord(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
             self->handleMouseUp(hwnd, coord, convertCursorType(msg, wparam));
         }
         break;
     }
     case WM_MOUSEMOVE: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             const Vector2SI32 coord(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
             self->handleMouseMove(hwnd, coord, convertCursorType(msg, wparam));
         }
         break;
     }
     case WM_MOUSEWHEEL: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             const Vector2SI32 delta(0, int16_t(HIWORD(wparam)) / WHEEL_DELTA);
             self->handleMouseWheel(hwnd, delta);
         }
         break;
     }
     case WM_KEYDOWN: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->m_client->sendKeyPressMessage(static_cast<nanoem_u32_t>(translateKey(lparam)));
         }
         break;
     }
     case WM_KEYUP: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->m_client->sendKeyReleaseMessage(static_cast<nanoem_u32_t>(translateKey(lparam)));
         }
         break;
     }
     case WM_CHAR:
     case WM_UNICHAR: {
-        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         if (self && wparam >= 32) {
             self->m_client->sendUnicodeInputMessage(static_cast<nanoem_u32_t>(wparam));
         }
         break;
     }
     case WM_ACTIVATE: {
-        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         if (self) {
         }
         break;
     }
     case WM_SIZE: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->handleWindowResize(hwnd, wparam);
         }
         break;
     }
     case WM_MOVE: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->m_service->requestViewportWindowMove(hwnd);
         }
         break;
     }
     case WM_SIZING: {
-        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         if (self && self->m_initialized && self->m_renderable) {
             self->resizeWindow();
         }
         break;
     }
     case WM_WINDOWPOSCHANGED: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->handleWindowPositionChange(hwnd);
         }
         break;
     }
     case WM_GETMINMAXINFO: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             LPMINMAXINFO info = reinterpret_cast<LPMINMAXINFO>(lparam);
             self->handleWindowConstraint(hwnd, info);
         }
         break;
     }
     case WM_DROPFILES: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             HDROP drop = reinterpret_cast<HDROP>(wparam);
             self->handleWindowDropFile(hwnd, drop);
         }
         break;
     }
     case WM_DPICHANGED: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             auto rect = reinterpret_cast<const RECT *>(lparam);
             const LONG width = rect->right - rect->left, height = rect->bottom - rect->top;
             const nanoem_f32_t devicePixelRatio = LOWORD(wparam) / Win32ThreadedApplicationService::kStandardDPIValue,
@@ -548,14 +549,14 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         break;
     }
     case WM_DISPLAYCHANGE: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->updateDisplayFrequency();
             self->m_service->requestUpdatingAllMonitors();
         }
         break;
     }
     case WM_SETFOCUS: {
-        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         if (self && self->m_initialized && !self->m_renderable) {
             self->setFocus();
             self->m_renderable = true;
@@ -563,7 +564,7 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         break;
     }
     case WM_KILLFOCUS: {
-        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         if (self && self->m_initialized && self->m_renderable) {
             self->killFocus();
             self->m_renderable = false;
@@ -571,7 +572,7 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         break;
     }
     case WM_POWERBROADCAST: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             if (const POWERBROADCAST_SETTING *settings = reinterpret_cast<POWERBROADCAST_SETTING *>(lparam)) {
                 self->updatePreferredFPS(settings);
             }
@@ -579,7 +580,7 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         break;
     }
     case WM_COMMAND: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             const uint32_t menuID = LOWORD(wparam);
             ApplicationMenuBuilder::MenuItemType menuType = static_cast<ApplicationMenuBuilder::MenuItemType>(menuID);
             self->handleMenuItem(hwnd, menuType);
@@ -797,13 +798,13 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     }
 #endif /* IMGUI_HAS_VIEWPORT */
     case WM_CLOSE: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->handleWindowClose(hwnd);
         }
         break;
     }
     case WM_DESTROY: {
-        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+        if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
             self->handleWindowDestroy(hwnd);
         }
         break;
@@ -812,7 +813,7 @@ MainWindow::handleWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         result = DefWindowProcW(hwnd, msg, wparam, lparam);
         break;
     }
-    if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+    if (auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA))) {
         if (IProgressDialog *dialog = self->m_progressDialog.first) {
             if (dialog->HasUserCancelled()) {
                 Progress::requestCancel();
@@ -1788,7 +1789,7 @@ MainWindow::handleMenuItem(HWND hwnd, ApplicationMenuBuilder::MenuItemType menuT
         break;
     }
     case ApplicationMenuBuilder::kMenuItemTypeFileExit: {
-        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        auto self = reinterpret_cast<MainWindow *>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         CloseWindow(self->m_windowHandle);
         break;
     }
@@ -1867,34 +1868,55 @@ MainWindow::setupDirectXRenderer(HWND windowHandle, int width, int height, bool 
     sample.Count = 1;
     sample.Quality = 0;
     m_swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    UINT flags = 0;
-#if defined(SOKOL_DEBUG) && SOKOL_DEBUG
-    flags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-    ID3D11DeviceContext *context = nullptr;
-    ID3D11Device *device = nullptr;
-    IDXGISwapChain *swapChain = nullptr;
-    D3D_FEATURE_LEVEL actualFeatureLevel;
-    static const D3D_DRIVER_TYPE driverTypes[] = {
-        D3D_DRIVER_TYPE_HARDWARE,
-        D3D_DRIVER_TYPE_WARP,
-    };
     static const D3D_FEATURE_LEVEL expectedFeatureLevels[] = {
         D3D_FEATURE_LEVEL_11_0,
         D3D_FEATURE_LEVEL_10_1,
         D3D_FEATURE_LEVEL_10_0,
         D3D_FEATURE_LEVEL_9_3,
     };
-    UINT numExpectedFeatureLevels = sizeof(expectedFeatureLevels) / sizeof(expectedFeatureLevels[0]);
+    const UINT numExpectedFeatureLevels = sizeof(expectedFeatureLevels) / sizeof(expectedFeatureLevels[0]);
+    ID3D11DeviceContext *context = nullptr;
+    ID3D11Device *device = nullptr;
+    IDXGISwapChain *swapChain = nullptr;
+    D3D_FEATURE_LEVEL actualFeatureLevel;
     HRESULT rc = 0;
     bool result = false;
-    for (size_t i = 0; i < BX_COUNTOF(driverTypes); i++) {
-        rc = D3D11CreateDeviceAndSwapChain(nullptr, driverTypes[i], nullptr, flags, expectedFeatureLevels,
-            numExpectedFeatureLevels, D3D11_SDK_VERSION, &m_swapChainDesc, &swapChain, &device, &actualFeatureLevel,
-            &context);
-        if (!FAILED(rc)) {
-            result = true;
-            break;
+    UINT flags = 0;
+#if defined(SOKOL_DEBUG) && SOKOL_DEBUG
+    flags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif /* SOKOL_DEBUG */
+#if defined(NANOEM_ENABLE_D3D11ON12)
+    {
+        IDXGIFactory *factory = nullptr;
+        CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
+        IDXGIAdapter *adapter = nullptr;
+        factory->EnumAdapters(0, &adapter);
+        D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device12));
+        adapter->Release();
+        D3D12_COMMAND_QUEUE_DESC desc = {};
+        desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        m_device12->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_commandQueue));
+        rc = D3D11On12CreateDevice(m_device12, flags, expectedFeatureLevels, numExpectedFeatureLevels,
+            reinterpret_cast<IUnknown **>(&m_commandQueue), 1, 0, &device, &context, &actualFeatureLevel);
+        factory->CreateSwapChain(device, &m_swapChainDesc, &swapChain);
+        factory->Release();
+        result = !FAILED(rc);
+    }
+#endif /* NANOEM_ENABLE_D3D11ON12 */
+    if (!result) {
+        static const D3D_DRIVER_TYPE driverTypes[] = {
+            D3D_DRIVER_TYPE_HARDWARE,
+            D3D_DRIVER_TYPE_WARP,
+        };
+        for (size_t i = 0; i < BX_COUNTOF(driverTypes); i++) {
+            rc = D3D11CreateDeviceAndSwapChain(nullptr, driverTypes[i], nullptr, flags, expectedFeatureLevels,
+                numExpectedFeatureLevels, D3D11_SDK_VERSION, &m_swapChainDesc, &swapChain, &device, &actualFeatureLevel,
+                &context);
+            if (!FAILED(rc)) {
+                result = true;
+                break;
+            }
         }
     }
     if (result) {
@@ -1940,9 +1962,9 @@ MainWindow::setupDirectXRenderer(HWND windowHandle, int width, int height, bool 
         device->SetPrivateData(WKPDID_D3DDebugObjectNameW, sizeof(kDeviceLabel), kDeviceLabel);
         static const wchar_t kDeviceContextLabel[] = L"ID3D11DeviceContext";
         context->SetPrivateData(WKPDID_D3DDebugObjectNameW, sizeof(kDeviceContextLabel), kDeviceContextLabel);
-#endif
+#endif /* SOKOL_DEBUG */
         ID3D10Multithread *threaded;
-        if (SUCCEEDED(context->QueryInterface(IID_PPV_ARGS(&threaded)))) {
+        if (!FAILED(context->QueryInterface(IID_PPV_ARGS(&threaded)))) {
             threaded->SetMultithreadProtected(TRUE);
             threaded->Release();
         }
@@ -2045,7 +2067,7 @@ MainWindow::setupOpenGLRenderer(HWND windowHandle, Error &error)
     m_service->setNativeDevice(m_device);
     m_service->setNativeView(windowHandle);
     return true;
-#else
+#else /* NANOEM_WIN32_HAS_OPENGL */
     BX_UNUSED_1(windowHandle);
     return false;
 #endif /* NANOEM_WIN32_HAS_OPENGL */
@@ -2061,6 +2083,10 @@ MainWindow::destroyRenderer()
         context->Release();
         device->Release();
         swapChain->Release();
+#if defined(NANOEM_ENABLE_D3D11ON12)
+        COMInline::safeRelease(m_commandQueue);
+        COMInline::safeRelease(m_device12);
+#endif /* NANOEM_ENABLE_D3D11ON12 */
 #if defined(SOKOL_DEBUG) && SOKOL_DEBUG
         if (sizeof(void *) == 8) {
             typedef HRESULT(WINAPI * pfn_DXGIGetDebugInterface)(const IID, void **);
@@ -2073,7 +2099,7 @@ MainWindow::destroyRenderer()
                 debugger->Release();
             }
         }
-#endif
+#endif /* SOKOL_DEBUG */
     }
 #if defined(NANOEM_WIN32_HAS_OPENGL)
     else {
@@ -2204,7 +2230,7 @@ MainWindow::registerAllPrerequisiteEventListeners()
             const char *sentryDSN = nullptr;
 #if defined(NANOEM_SENTRY_DSN)
             sentryDSN = NANOEM_SENTRY_DSN;
-#endif
+#endif /* NANOEM_SENTRY_DSN */
             JSON_Object *pending = json_object(self->m_service->applicationPendingChangeConfiguration());
             const ApplicationPreference *pref = self->m_preference->applicationPreference();
             if (pref->isCrashReportEnabled()) {

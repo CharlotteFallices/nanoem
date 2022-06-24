@@ -94,6 +94,7 @@
 #define NANOEM_FRAME_INDEX_MAX_SIZE (~(nanoem_frame_index_t)(0))
 #define PMD_BONE_NAME_LENGTH 20
 #define PMD_BONE_CATEGORY_NAME_LENGTH 50
+#define PMD_BONE_MAX_DEPTH 256
 #define PMD_JOINT_NAME_LENGTH 20
 #define PMD_MATERIAL_DIFFUSE_TEXTURE_NAME_LENGTH 20
 #define PMD_MODEL_NAME_LENGTH 20
@@ -1115,21 +1116,25 @@ nanoemAnnotationSet(kh_annotation_t **annotations_ptr, const char *key, const ch
 {
     kh_annotation_t *annotations;
     khiter_t it;
-    char *ptr;
+    char *key_ptr, *value_ptr;
     if (*annotations_ptr) {
         annotations = *annotations_ptr;
     }
     else {
         annotations = *annotations_ptr = kh_init_annotation();
     }
-    it = kh_put_annotation(annotations, nanoemUtilCloneString(key, status), ret);
+    key_ptr = nanoemUtilCloneString(key, status);
+    it = kh_put_annotation(annotations, key_ptr, ret);
     if (*ret > 0) {
         kh_value(annotations, it) = nanoemUtilCloneString(value, status);
     }
     else if (*ret == 0) {
-        ptr = kh_value(annotations, it);
+        value_ptr = kh_value(annotations, it);
         kh_value(annotations, it) = nanoemUtilCloneString(value, status);
-        nanoem_free(ptr);
+        nanoem_free(value_ptr);
+    }
+    else {
+        nanoem_free(key_ptr);
     }
 }
 

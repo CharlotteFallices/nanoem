@@ -86,7 +86,8 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/fx9/Syntax.c
                            $<TARGET_FILE:fx9_lemon> -T${FX9_PATH}/lemon/lempar.c
                            -q ${CMAKE_CURRENT_BINARY_DIR}/fx9/Syntax.y
                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                   MAIN_DEPENDENCY ${FX9_PATH}/src/Syntax.y)
+                   MAIN_DEPENDENCY ${FX9_PATH}/src/Syntax.y
+                   VERBATIM)
 add_custom_target(fx9_gen_parser SOURCES ${CMAKE_CURRENT_BINARY_DIR}/fx9/Syntax.c)
 add_dependencies(fx9_gen_parser fx9_lemon)
 set_property(TARGET fx9_gen_parser PROPERTY FOLDER dependencies/effect)
@@ -128,8 +129,10 @@ set_property(TARGET fx9 APPEND PROPERTY COMPILE_DEFINITIONS
                         "FX9_INTERMEDIATE=$<BOOL:${INTERMEDIATE}>"
                         $<$<BOOL:${WIN32}>:_CRT_SECURE_NO_WARNINGS=1>)
 set_property(TARGET fx9 APPEND PROPERTY COMPILE_OPTIONS -fno-rtti)
-if(NOT MSVC)
-  set_property(SOURCE ${EFFECT_COMPILER_SOURCES} APPEND PROPERTY COMPILE_FLAGS -std=c++11)
+if(WIN32 AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  set_property(TARGET ${_plugin_name} PROPERTY CXX_STANDARD 14)
+else()
+  set_property(TARGET ${_plugin_name} PROPERTY CXX_STANDARD 11)
 endif()
 
 option(FX9_ENABLE_ASAN "Enable ASAN" OFF)
