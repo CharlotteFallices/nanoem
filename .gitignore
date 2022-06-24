@@ -29,3 +29,19 @@
 # rust
 /rust/**/target
 /**/*.rs.bk
+
+# macOS System Cache
+.DS_Store
+
+# build result
+/build
+/CMakeFiles
+cmake_install.cmake
+CMakeCache.txt
+CMakeScripts/ReRunCMake.make
+CPackConfig.cmake
+CPackSourceConfig.cmake
+/macOS/CMakeFiles
+nanoem.xcodeproj
+nanoem/version.c
+/sapp/CMakeFiles
